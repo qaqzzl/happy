@@ -204,7 +204,10 @@ func (mux *RouterMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if path == "" {path = "/"}
 	if _,ok := DefaultServeMux.m[r.Method][path]; ok {
-		DefaultServeMux.m[r.Method][path].h(context)
+		context.Handler = DefaultServeMux.m[r.Method][path].h
+		if DefaultServeMux.m[r.Method][path].middleware == nil {
+			DefaultServeMux.m[r.Method][path].h(context)
+		}
 		for _, m := range DefaultServeMux.m[r.Method][path].middleware {
 			m(context)
 		}
