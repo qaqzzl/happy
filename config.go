@@ -46,7 +46,8 @@ func initConf(path string) {
 	var strcet string
 	f, err := os.Open(path)
 	if err != nil { //抛出错误信息
-		panic("配置文件读取失败")
+		//panic("配置文件读取失败")
+		return
 	}
 	defer f.Close()
 

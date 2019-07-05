@@ -165,7 +165,7 @@ func (route *RouterGroup) handle(pattern string, method string, handler Handlers
 		pattern = strings.Trim(pattern, "/")
 	}
 	if pattern == "" {
-		panic("http: invalid pattern")
+		pattern = "/"
 	}
 	if handler == nil {
 		panic("http: nil handler")
@@ -213,6 +213,7 @@ func (mux *RouterMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	w.WriteHeader(404)
 	return
 }
 

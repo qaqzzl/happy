@@ -3,6 +3,10 @@ package happy
 import "encoding/json"
 
 func (c *Context) WJson(data interface{})  {
+	writer, _ := json.Marshal(&data)
+	c.ResponseWriter.Write(writer)
+	return
+
 	c.ResponseWriter.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if paramJson, err := json.Marshal(data); err != nil {
 		panic("WJson: Json parsing failed ")
