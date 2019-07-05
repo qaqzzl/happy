@@ -2,9 +2,11 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"strings"
 	"log"
+	"reflect"
+	"strings"
 )
 //MySql数据库连接
 var mysqlConn	 	*sql.DB
@@ -21,7 +23,7 @@ type DB struct {
 
 func connect() *DB {
 	if mysqlConn == nil {
-		mysqlConn, _ = sql.Open("mysql", "")
+		mysqlConn, _ = sql.Open("mysql", "blog:mysqlblog336699MM@tcp(qaqzz-com.mysql.rds.aliyuncs.com)/my_blog")
 		mysqlConn.SetMaxOpenConns(100)		//最大连接数
 		mysqlConn.SetMaxIdleConns(50)		//空闲连接数
 	}
@@ -42,7 +44,7 @@ func Table(table string) (db *DB) {
 func (db *DB) Where(where string, args ...interface{}) *DB {
 	if where != "" {
 		db.wheres = " WHERE " + where
-		db.dataMapping = append(db.dataMapping, args)
+		db.dataMapping = append(db.dataMapping, args...)
 	}
 	return db
 }
@@ -77,7 +79,7 @@ func (db *DB) Order(order string) *DB {
 func (db *DB) Get() ([]map[string]string, error) {
 	select_sql := "SELECT "+db.selects+" FROM "+db.tables
 	if db.joins != "" {
-		select_sql += " "+db.joins
+		select_sql += " "+db.joins + " "
 	}
 	if db.wheres != "" {
 		select_sql += db.wheres
@@ -90,12 +92,26 @@ func (db *DB) Get() ([]map[string]string, error) {
 	}
 	var data []map[string]string
 	//查询多条
-	select_rows,err := mysqlConn.Query(select_sql, db.dataMapping ...)
+	rows,err := mysqlConn.Query(select_sql, db.dataMapping...)
 	if err != nil {
 		panic(err.Error())
 	}
-	for select_rows.Next() {
-		columns, _ := select_rows.Columns()
+	for rows.Next() {
+		//此方法有bug interface conversion: interface {} is int64, not []uint8
+		columns, _ := rows.Columns()		// 获取列名
+		ct, err := rows.ColumnTypes()		// 获取列类型
+		if  err != nil {
+			panic("不支持ColumnTypes")
+		}
+
+		// 关键点
+		arr := make([]interface{}, len(ct))
+		for i, v := range ct {
+			t := v.ScanType()
+			v := reflect.New(t).Interface()
+			arr[i] = v
+			fmt.Println(columns[i], t)
+		}
 
 		scanArgs := make([]interface{}, len(columns))
 		values := make([]interface{}, len(columns))
@@ -105,7 +121,7 @@ func (db *DB) Get() ([]map[string]string, error) {
 		}
 
 		//将数据保存到 record 字典
-		err = select_rows.Scan(scanArgs...)
+		err = rows.Scan(scanArgs...)
 		record := make(map[string]string)
 		for i, col := range values {
 			if col != nil {
@@ -114,7 +130,7 @@ func (db *DB) Get() ([]map[string]string, error) {
 		}
 		data = append(data, record)
 	}
-	select_rows.Close()
+	rows.Close()
 	return data,err
 }
 
